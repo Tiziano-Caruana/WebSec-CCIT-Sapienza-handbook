@@ -14,6 +14,10 @@ Mi sembra doveroso sottolineare che questo progetto è legato solamente a me, Ti
 
 Le note sono degli approfondimenti inseriti per completezza che possono tornare utili in challenge particolari e situazioni specifiche, ma che non sono fondamentali per la risoluzione delle challenge proposte nel training interno nè per la comprensione degli argomenti successivi.
 
+Un po' di spazio sarà lasciato per i pre-requisiti necessari a capire le varie tipologie di attacco che altrimenti risulterebbero incomprensibili al lettore. Il numero di partecipanti proveniente dalle superiori o da corsi di laurea non strettamente legati all'informatica non è trascurabile, ed è per questo necessario navigare anche argomenti non direttamente legati all'exploitation.
+
+Il capitolo 0 e i capitoli X.5 sono di questa natura, e possono quindi essere saltati da persone che si ritengono sufficientemente preparate sull'argomento. Non abbiate paura di saltare questi capitoli o anche quelli relativi a vulnerabilità che già conoscete. Se vi rendete conto che avete commesso un errore, o se vi serve qualcosa nello specifico in futuro, potrete sempre tornarci successivamente.
+
 
 # Capitolo 0
 ## Internet
@@ -59,9 +63,9 @@ In caso fosse necessario uno scambio di informazioni al di fuori del contesto de
 
 
 #### [Metodi HTTP comuni](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods):
-- **GET** (ottenimento informazioni della risorsa)
-- **POST** (azione/invio dati alla risorsa)
-- **HEAD**(GET senza body message)
+- **GET** (ottieni la risorsa o informazioni su di essa)
+- **POST** (azione/invia dati alla risorsa)
+- **HEAD** (GET senza body message)
 - **TRACE** (diagnostica)
 - **OPTIONS** (visualizza metodi disponibili)
 - **PUT** (crea nuova risorsa)
@@ -74,29 +78,62 @@ In caso fosse necessario uno scambio di informazioni al di fuori del contesto de
 - **Accept**: Definisce i [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) che il client accetterà dal server, in ordine di preferenza. Ad esempio, `Accept: application/json, text/html` indica che il client preferisce ricevere risponse in JSON, ma le accetta anche in HTML.
 - **User-Agent**: Identifica il browser e/o il client che sta effettuando la richiesta.
 - **Authorization**: Usato per l'invio di credenziali, utile quando si prova ad accedere ad una risorsa protetta.
-- **Content-Type**: Definisce il MIME type del contenuto del request body.
 - **Cookie**: Usato per inviare al server cookie precedentemente memorizzati. Utile per personalizzare l'esperienza dell'utente e "combattere" i limiti della natura stateless del protocollo HTTP.
+- **Content-Type**: Definisce il MIME type del contenuto del request body.
 
 ##### Response
 - **Content-Type**: Come sopra.
 - **Server**: La controparte di `User-Agent`.
-- **Set-Cookie**: Comunica al client che dovrebbe memorizzare un cookie con un certo nome, valore, e facoltativamente scadenza, dominio, percorso e flag di sicurezza. Esempio: `Set-Cookie: score=127`.
+- **Set-Cookie**: Comunica al client che dovrebbe memorizzare un cookie con un certo nome, valore, e facoltativamente scadenza, dominio, percorso e flag di sicurezza. Esempio: `Set-Cookie: score=127`. Una volta che `Set-Cookie` viene ricevuto ed accettato, il client invierà al server il cookie ad ogni richiesta eseguita.
 - **Content-Length**: Specifica la grandezza in byte del response body. In caso "apparisse" dal lato del richiedente, dobbiamo fare attenzione a specificare la lunghezza giusta in caso volessimo modificare i nostri payload.
 
 Negli esempi mostrati precedentemente potete vedere come questi header vengono utilizzati in una comunicazione reale tra un web browser e un sito web statico.
 
 Generalmente, quando un header inizia per `X-`, è custom.
-È utile notare come il funzionamento di HTTP sia solo una convenzione, ed il server può decidere di implementare qualsiasi metodo e qualsiasi header (custom headers e methods). Questi elementi sono di nostro interesse, essendo implementati direttamente dal gestore del sito e quindi più facilmente soggetti ad errori di implementazione. Inoltre, nulla impedisce al programmatore di usare una GET per modificare dati, o una POST per fornire informazioni. Lo stesso vale per gli elementi mostrati successivamente in questo capitolo.
+È utile notare come il funzionamento di HTTP sia solo una convenzione, ed il server può decidere di implementare qualsiasi metodo e qualsiasi header (custom headers e methods). Questi elementi sono di nostro interesse, essendo implementati direttamente dal gestore del sito e quindi più facilmente soggetti ad errori di implementazione. Inoltre, nulla impedisce al programmatore di usare una GET per modificare dati, o una POST per fornire informazioni, nonostante questo sia ovviamente sconsigliato. Lo stesso vale per gli elementi mostrati successivamente in questo capitolo.
 
 #### [Status codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status):
 - **1xx**: Risposte informative
 - **2xx**: Successo
 - **3xx**: Reindirizzamento
-- **4xx**: Errore del client
-- **5xx**: Errore del server
+- **4xx**: Errore del client (tipicamente richieste sbagliate)
+- **5xx**: Errore del server (errori di un programma ed eccezioni non gestite)
 
 #### *Riassumendo*:
 
-Pensiamo all'HTTP request come a una lettera che spediamo tramite posta. Nella riga della richiesta, noi come mittenti specifichiamo cosa vogliamo sia fatto e dove vogliamo sia fatto, come scrivessimo l'indirizzo e il tipo di servizio desiderato su una busta. Gli header della richiesta contengono informazioni su di noi e le nostre preferenze, simili a scrivere il nostro nome e il nostro indirizzo sul retro della busta. Se chi offre il servizio ha bisogno di un materiale o di un oggetto da utilizzare per soddisfare la nostra richiesta, possiamo includerlo nel body message, proprio come inviare un pacco insieme alla busta.
+Possiamo pensare all'HTTP request come a una lettera che spediamo tramite posta. Nella riga della richiesta, noi come mittenti specifichiamo cosa vogliamo sia fatto e dove vogliamo sia fatto, come scrivessimo l'indirizzo e il tipo di servizio desiderato su una busta. Gli header della richiesta contengono informazioni su di noi e le nostre preferenze, simili a scrivere il nostro nome e il nostro indirizzo sul retro della busta. Se chi offre il servizio ha bisogno di un materiale o di un oggetto da utilizzare per soddisfare la nostra richiesta, possiamo includerlo nel body message, proprio come inviare un pacco insieme alla busta.
 
 Il server, simile al destinatario della nostra lettera, riceve la richiesta, cerca di soddisfarla e ci invia una lettera di risposta. Nella riga dello stato della risposta, capiamo se tutto è andato bene o se c'è stato un problema, proprio come leggere l'indicazione di consegna sulla nostra busta postale. Negli header della risposta, otteniamo informazioni su chi ha eseguito il lavoro e come vorrebbe che ci comportassimo con il risultato. Infine, nel body message della risposta, riceviamo il prodotto richiesto, come se insieme alla busta ci venisse spedito un pacco contenente ciò che avevamo chiesto.
+
+
+### [HTTP Cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies)
+I cookie vengono spesso arricchiti da attributi, ed i principali sono:
+- **Expires**: Specifica il tempo di scadenza in secondi per il cookie. Se non specificato, il cookie viene eliminato al termine della sessione (session cookie).
+- **Secure**: I cookie con questa flag vengono inviati solo in richieste [HTTPS](https://it.wikipedia.org/wiki/HTTPS) (HTTP crittografato).
+- **HttpOnly**: JavaScript non può accedere al cookie.
+- **Domain**: Definisce il dominio per il quale il cookie è valido.
+- **Path**: Stessa cosa ma col percorso.
+- **Same-Site**: Specifica se il cookie può venire incluso in richieste che coinvolgono siti terzi. `SameSite=Strict` indica che il browser si rifiuterà di condividere il cookie con siti web diversi da quello che ci ha "detto" di settare il cookie. È una protezione che può scoraggiare attacchi CSRF.
+
+Un cookie (nel browser: F12 -> Application -> Cookies):
+![Esempio di cookie](img/chapter0/CookieEsempio.png)
+
+### [HTTP Authentication](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication)
+Secondo gli standard del protocollo HTTP, la struttura della comunicazione tra un client che richiede una risorsa protetta e il server consiste nei seguenti step:
+- Il client richiede la risorsa
+- Il server risponde con lo status code `401 Unauthorized` (non autorizzato), specificando tramite l'header `WWW-Authenticate` il tipo di autenticazione richiesto. In questa fase possono essere inviate al client diverse informazioni, a seconda del metodo di autenticazione richiesto.
+- Il client deve rispondere con l'header `Authorization` contenente le credenziali richieste.
+- Il server risponde `200 OK` o `403 Forbidden` (accesso vietato).
+
+`401 Unauthorized` = "non so chi sei", `403 Forbidden` = "non sei un utente che ha accesso alla risorsa".
+
+#### Principali tipi di autenticazione:
+- **Basic Authentication**: `username:password` vengono inviati encodati in [`base64`](https://it.wikipedia.org/wiki/Base64). L'encoding non offre nessun layer di sicurezza aggiuntivo, di conseguenza un'autenticazione `Basic` in HTTP è completamente insicura, come mandare le informazioni in chiaro.
+- **Digest Authentication**: Offusca username e password usando anche altri parametri come `realm` e `nonce`
+- **Bearer Authentication**: Usata soprattutto in contesti basati su [Oauth2](https://www.teranet.it/introduzione-ad-oauth-2). Di fatto, invece di fornire le credenziali al server che richiede l'autenticazione, ci autentichiamo presso un altro server del quale il server iniziale si fida. Questo è possibile perchè il server autenticante fornisce all'utente un token da usare come "cartellino d'ingresso" quando passiamo all'ultima fase del processo di autenticazione. Spesso i token sono generati come [JWT](https://en.wikipedia.org/wiki/JSON_Web_Token).
+
+*Nota: I tipi di autenticazione potrebbero non essere chiari fin da subito, e non sono necessariamente spendibili in attacchi utili al contesto di CyberChallenge, ma l'utilizzo delle Bearer authentication è in continua crescita ed è un argomento che ritengo particolarmente importante. Ne consiglio caldamente l'approfondimento autonomo.*
+
+
+### Conclusione del capitolo:
+Quando difendiamo o attacchiamo un servizio, è utile ricordare che i cookies, gli header, il body content e il metodo della richiesta possono venire modificati dal client come esso vuole. Esistono strumenti (come BurpSuite) che permettono di modificare facilmente tutte le informazioni possibili che il server è in grado di ricevere. Fidarsi di ciò che viene inviato dal client significa accettare di gestire un servizio vulnerabile. Uno sviluppatore deve fare in modo di limitare per quanto possibile le funzionalità che richiedano una fiducia dell'utente. La natura stateless di HTTP costringe gli sviluppatori ad usare i cookie per l'autenticazione (immaginate di dover loggare ogni volta che cambiate reel), mettendoli in difficoltà e aprendo la possibilità a vari tipi di attacchi cross-site che vedremo più avanti.
