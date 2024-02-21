@@ -1,27 +1,21 @@
 # Introduzione
 
-Questo "manuale" vuole essere una guida utile all'arte della web exploitation per quanto riguarda i programmi seguiti da CyberChallenge negli anni antecedenti al 2025. 
+Questa guida è dedicata ai partecipanti di CyberChallenge.IT e, una volta ampliata e approfondita, ai membri dei TRX e appassionati in generale. Questa risorsa mira a offrire una panoramica sull'esfiltrazione di dati nella web exploitation.
 
-Nel mondo sono già disponibili diversi libri che approfondiscono questa materia come merita, e pullulla di write-up e repository da leggere e dalle quali copiare payload da usare e modificare come più ci piace.
+Mentre esistono già numerosi libri e risorse online sull'argomento, questa guida mira a fornire una versione italiana chiara e accessibile, adatta alle esigenze specifiche dei partecipanti a CyberChallenge e membri TRX.
 
-La mia intenzione è quella di creare un testo soddisfacente in lingua italiana (nei limiti imposti dalla terminologia tecnica) che copra solamente gli argomenti relativi all'esfiltrazione di dati, così come richiesto dal programma e dagli obiettivi di CyberChallenge.
+È importante sottolineare che questa guida riflette esclusivamente le mie conoscenze e opinioni personali. Non ho esperienze dirette nell'ambito della sicurezza informatica e non mi assumo responsabilità per l'utilizzo improprio delle informazioni qui fornite al di fuori del contesto di CyberChallenge.IT e più in generale del mondo delle CTF.
 
-È ovvio che la sicurezza web non si limiti solo a questo: per un'azienda anche il solo fatto di avere un sito web non disponibile può provocare milioni di euro di danni, per non parlare delle possibili ricadute sulla sua immagine.
-
-Volevo però fare in modo di mettere a disposizione un testo dritto al punto e che non risultasse troppo verboso, toccando solamente i temi necessari al programma in modo da risparmiare tempo a chi deciderà di non approfondire questo ambito per conto proprio, e allo stesso tempo permettere agli appassionati di acquisire una base tecnica sufficiente ad affrontare temi più entusiasmanti e decisamente più complessi.
-
-Mi sembra doveroso sottolineare che questo progetto è legato solamente a me, Tiziano Caruana, e che nè le persone affiliate al progetto CyberChallenge.IT, nè i dipendenti e gli studenti di Sapienza me escluso, nè nessun'altra persona sono legate a questo progetto. Inoltre io, ovvero l'autore di questo "manuale", non ho esperienze dirette nell'ambito della sicurezza informatica nè mi sono posto l'obiettivo di raggiungere con le mie parole professionisti, dilettanti o studenti che abbiano l'intenzione di approcciare applicazioni reali, che sia per motivi professionali o meno. Non mi prendo quindi responsabilità sulle ripercussioni che le conoscenze acquisite durante la lettura di questo "manuale", o i codici inseriti nello stesso, possono avere se utilizzate al di fuori del contesto per cui sono state create, ovvero per la risoluzione di challenge nel contesto di CyberChallenge.IT, che sia negli addestramenti o nelle gare.
-
-Le note sono degli approfondimenti inseriti per completezza che possono tornare utili in challenge particolari e situazioni specifiche, ma che non sono fondamentali per la risoluzione delle challenge proposte nel training interno nè per la comprensione degli argomenti successivi.
-
-Un po' di spazio sarà lasciato per i pre-requisiti necessari a capire le varie tipologie di attacco che altrimenti risulterebbero incomprensibili al lettore. Il numero di partecipanti proveniente dalle superiori o da corsi di laurea non strettamente legati all'informatica non è trascurabile, ed è per questo necessario navigare anche argomenti non direttamente legati all'exploitation.
-
-Il capitolo 0 e i capitoli X.5 sono di questa natura, e possono quindi essere saltati da persone che si ritengono sufficientemente preparate sull'argomento. Non abbiate paura di saltare questi capitoli o anche quelli relativi a vulnerabilità che già conoscete. Se vi rendete conto che avete commesso un errore, o se vi serve qualcosa nello specifico in futuro, potrete sempre tornarci successivamente.
+I lettori sono invitati a saltare i capitoli o le sezioni che ritengono già familiari o non rilevanti per le loro esigenze.
 
 
 # Capitolo 0
 ## Internet
-Nel World Wide Web ogni risorsa viene identificata univocamente da un [URL](https://it.wikipedia.org/wiki/Uniform_Resource_Locator) (Uniform Resource Locator)
+Nel World Wide Web ogni risorsa viene identificata univocamente da un [URL](https://it.wikipedia.org/wiki/Uniform_Resource_Locator) (Uniform Resource Locator).
+
+Per risorsa intendiamo un qualsiasi insieme di dati o informazioni che abbiano senso. Immagini, paragrafi testuali, video, audio, pagine web, risultati dell'elaborazione di un programma sono tutti esempi di risorsa. Wikipedia definisce le "risorse sul Web" come "tutte le fonti di informazioni e servizi disponibili in Rete, identificate dall'URL e fisicamente presenti e accessibili su web server tramite web browser dell'host client."
+
+Se questa definizione non è chiara, sarà utile fare un ripasso del [modello client-server](https://it.wikipedia.org/wiki/Sistema_client/server)
 
 Illustrazione formale:
 
@@ -51,6 +45,9 @@ Ciò che viene fatto è una conversione dal carattere riservato alla sua rappres
 ### [HTTP](https://it.wikipedia.org/wiki/Hypertext_Transfer_Protocol)
 l'HyperText Transfer Protocol, HTTP, è un protocollo stateless, ovvero ogni richiesta è indipendente dalle richieste precedenti. Le due fasi previste sono l'HTTP request (il client fa una richiesta al server) e l'HTTP response (il server risponde).
 
+In generale, ogni volta che il client ha bisogno di richiedere una risorsa al server, comunica utilizzando HTTP. 
+Questo significa che per ogni risorsa che vorrai visualizzare, il tuo dispositivo dovrà effettuare un'HTTP request, e ricevere dal server un'HTTP response. 
+
 Esempio di HTTP request:
 
 ![HTTP request](/img/capitolo0/HTTPrequest.png)
@@ -70,12 +67,12 @@ In caso fosse necessario uno scambio di informazioni al di fuori del contesto de
 - **OPTIONS** (visualizza metodi disponibili)
 - **PUT** (crea nuova risorsa)
 - **DELETE** (elimina risorsa specificata)
-- **CONNECT** (crea un tunnel in caso di proxy)
+- **CONNECT** (crea un [tunnel](https://it.wikipedia.org/wiki/Protocollo_di_tunneling) in caso di [proxy](https://it.wikipedia.org/wiki/Proxy))
 - **PATCH** (modifica la risorsa)
 
 #### [Header HTTP comuni](https://blog.postman.com/what-are-http-headers/):
 ##### Request
-- **Accept**: Definisce i [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) che il client accetterà dal server, in ordine di preferenza. Ad esempio, `Accept: application/json, text/html` indica che il client preferisce ricevere risponse in JSON, ma le accetta anche in HTML.
+- **Accept**: Definisce i [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) che il client accetterà dal server, in ordine di preferenza. Ad esempio, `Accept: application/json, text/html` indica che il client preferisce ricevere risposte in [JSON](https://it.wikipedia.org/wiki/JavaScript_Object_Notation), ma le accetta anche in [HTML](https://it.wikipedia.org/wiki/HTML).
 - **User-Agent**: Identifica il browser e/o il client che sta effettuando la richiesta.
 - **Authorization**: Usato per l'invio di credenziali, utile quando si prova ad accedere ad una risorsa protetta.
 - **Cookie**: Usato per inviare al server cookie precedentemente memorizzati. Utile per personalizzare l'esperienza dell'utente e "combattere" i limiti della natura stateless del protocollo HTTP.
@@ -84,7 +81,7 @@ In caso fosse necessario uno scambio di informazioni al di fuori del contesto de
 ##### Response
 - **Content-Type**: Come sopra.
 - **Server**: La controparte di `User-Agent`.
-- **Set-Cookie**: Comunica al client che dovrebbe memorizzare un cookie con un certo nome, valore, e facoltativamente scadenza, dominio, percorso e flag di sicurezza. Esempio: `Set-Cookie: score=127`. Una volta che `Set-Cookie` viene ricevuto ed accettato, il client invierà al server il cookie ad ogni richiesta eseguita.
+- **Set-Cookie**: Comunica al client che esso dovrebbe memorizzare un cookie con un certo nome, valore, e facoltativamente scadenza, dominio, percorso e flag di sicurezza. Esempio: `Set-Cookie: score=127`. Una volta che `Set-Cookie` viene ricevuto ed accettato, il client invierà al server il cookie ad ogni richiesta eseguita.
 - **Content-Length**: Specifica la grandezza in byte del response body. In caso "apparisse" dal lato del richiedente, dobbiamo fare attenzione a specificare la lunghezza giusta in caso volessimo modificare i nostri payload.
 
 Negli esempi mostrati precedentemente potete vedere come questi header vengono utilizzati in una comunicazione reale tra un web browser e un sito web statico.
@@ -273,7 +270,7 @@ Ci sono poi altre istruzioni e operatori che tornano particolarmente utili quand
 | 2 | Titto | 2 |
 | 3 | marco | 3 |
 
-`SELECT * FROM Players WHERE Username LIKE "%o"`
+`SELECT * FROM Players WHERE Username LIKE "%o%"`
 
 | ID | Username | Team |
 | ----------- | ----------- | ----------- |
