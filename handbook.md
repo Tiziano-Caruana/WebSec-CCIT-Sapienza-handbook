@@ -366,4 +366,72 @@ Come per la `SELECT`, se si devono rinominare più colonne, basta dividere i var
 <div style="page-break-after: always;"></div>
 
 # Capitolo 1
+
+Con il termine "patch" si intendono le modifiche che si applicano ad un programma per mitigare o rimuovere una vulnerabilità.
+Remediation = rimozione di una vulnerabilità.
+Mitigation = riduzione dell'impatto di una vulnerabilità, o comunque aumento della difficoltà nello sferrare un attacco. Sono frequenti nelle [attacco e difesa](https://2022.faustctf.net/information/attackdefense-for-beginners/), competizioni nelle quali il tempo è una risorsa particolarmente preziosa.
+
+I test *blackbox* vengono eseguiti senza avere a disposizione il codice, al contrario dei test *whitebox*.
+
 ## SQL injection
+L'SQL injection è una vulnerabilità di *code injection*, ovvero permette all'attaccante di scrivere ed eseguire codice sul server host. È tanto semplice (da sfruttare ed evitare) quanto potenzialmente distruttiva.
+
+### Logic SQLi
+#### Presentazione
+
+Prendetevi un attimo per pensare a come implementereste una web application che permetta all'utente di eseguire una query. Prendiamo per esempio il seguente codice:
+
+```sql
+query = "SELECT id, name, points FROM teams WHERE name = '" + request.form['query'] + "'"
+conn = sqlite3.connect("file:CTF_scoreboard.db", uri=True)
+cursor = conn.cursor()
+
+cursor.execute(query)
+results = cursor.fetchall()
+str_res = str(results)
+```
+
+Con `request.form['query']` il programma accetta l'input dell'utente, per poi eseguire la query e restituire il risultato. Prendetevi un po' di tempo, e provate a capire dove si trova l'errore.
+
+Il programma di per sè funziona perfettamente, ma il fatto che la stringa fornita dall'utente venga semplicemente concatenata alla query, permette a quest'ultimo di chiudere la parentesi relativa alla stringa `name` e fare così ciò che vuole. Per farsi restituire l'intero contenuto della tabella, gli basterebbe fare in modo che la condizione sia sempre vera, ad esempio inserendo nel campo `query`:
+
+`' or 'a'='a`
+E verrebbe quindi eseguita la query `SELECT id, name, points FROM teams WHERE name = '' or 'a'='a'`.
+
+#### Commenti
+
+Ciò che è comune fare, quando possibile, è commentare il resto della query invece che cercare di completarla perfettamente. In questo caso, si è dovuto ricorrere al confronto tra stringhe in modo da "usare" l'ultimo apice, ma si è soliti usare questo tipo di payload:
+
+`' or 1=1 -- `, che significa eseguire `SELECT id, name, points FROM teams WHERE name = '' or 1=1 -- '`.
+
+In SQL il modo di scrivere commenti può variare a seconda del DBMS, ma `-- ` (notare lo spazio dopo i trattini) dovrebbe fornirvi il risultato desiderato in ogni situazione. In questo modo possiamo scrivere i comandi che vogliamo senza preoccuparci di cosa è scritto dopo il nostro payload, il che torna particolarmente utile in attacchi *blackbox* nei quali, di fatto, vaghiamo nel vuoto.
+
+*Challenge d'esempio: https://training.olicyber.it/challenges#challenge-48*
+
+
+### Union-Based SQLi
+Una volta che siamo sicuri della nostra scoperta, possiamo spingerci oltre. La Logic SQLi appena mostrata permette "solo" di ottenere il contenuto della tabella selezionata, ma ci sono anche comandi, come `UNION`, che ci permettono di ottenere dati da più tabelle.
+
+In un contesto *whitebox*, non ci è richiesta chissà quale acrobazia. Basta ricordare la sintassi del comando, controllare nel codice il nome di tabelle e colonne, ed abbiamo a disposizione un leak dell'intero database. Inserendo nel campo `query`:
+
+`' UNION SELECT * FROM players -- `
+Verrà eseguita la query: `SELECT id, name, points FROM teams WHERE name = '' UNION SELECT * FROM players -- '`, *leakkando* così i dati dell'intera tabella `players`.
+
+#### Database metadata
+Se però ci trovassimo in uno scenario *blackbox*, non avremmo tutte queste informazioni. Dovremmo tirare a indovinare il nome della tabella e delle varie colonne corrispondenti, senza mai sapere se abbiamo scoperto tutte le colonne possibili o meno. 
+
+In questi casi, torna utile l'`information_schema` del database. 
+Si tratta di un prefisso per indicare le tabelle che contengono [metadati](https://it.wikipedia.org/wiki/Metadato) ("dati sui dati"). Tra le innumerevoli informazioni alle quali si può avere accesso raggiungendo queste tabelle, ci sono anche i nomi di tutte le tabelle create dall'utente e le relative colonne.
+
+La sintassi usata in questa fase può cambiare molto tra un DBMS e un altro. I passaggi da eseguire invece rimangono gli stessi (esempi riferiti a MariaDB):
+
+- Trovare i nomi delle tabelle: `SELECT id, name, points FROM teams WHERE name = '' UNION SELECT 1, TABLE_NAME, 2 FROM INFORMATION_SCHEMA.TABLES -- '`.
+- Trovare i nomi delle colonne: `SELECT id, name, points FROM teams WHERE name = '' UNION SELECT 1, CONCAT(COLUMN_NAME, ' ', DATA_TYPE), 2 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'players'-- '`
+- Abbiamo tutte le informazioni, e possiamo agire come stessimo risolvendo una challenge *whitebox*
+
+#### Consigli
+- La prima cosa da fare quando si approccia una challenge *blackbox*, una volta che ci si è assicurati della presenza di un'SQL injection, è quella di verificare il DBMS usato...
+- ...Una volta fatto questo, potremo fare delle ricerce specifiche su internet per la sintassi (esistono anche delle cheat sheet specifiche per le SQLi, come quella di [PortSwigger](https://portswigger.net/web-security/sql-injection/cheat-sheet)) e usare siti che ci permettono di provare i nostri comandi prima di eseguire delle query sul servizio che stiamo attaccando. Ad esempio, per verificare la correttezza delle query di questo capitolo, ho usato [sqliteonline](https://sqliteonline.com/), ovviamente avendo cura nel selezionare il DBMS giusto
+- Le documentazioni possono risultare particolarmente dettagliate, o in alcuni casi possono mancare delle descrizioni fondamentali di come vengono gestiti i metadati. In questi casi, usare un servizio come quelli riportati sopra (ad esempio selezionando tutti i dati possibili dall'information_schema del database di demo offerto dal servizio) ci permette di ottenere informazioni sulle colonne presenti nell'INFORMATION_SCHEMA più velocemente.
+- Le tabelle presenti nel database possono essere VERAMENTE tante. In questi casi è utile trovare la discriminante che nei metadati distingue le tabelle generate automaticamente e quelle create da un programmatore/utente, ed aggiungere una condizione filtro. 
+- L'`information_schema` o un suo equivalente è presente in tutti i DBMS. Se non trovate ciò che cercate, state cercando male.
