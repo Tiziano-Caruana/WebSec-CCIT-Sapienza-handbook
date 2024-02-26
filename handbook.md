@@ -266,11 +266,86 @@ Può succedere in alcune challenge blackbox di CyberChallenge (ma soprattutto Ol
 ##### Timeout
 Per evitare che il programma si blocchi per una richiesta sbagliata o un problema infrastrutturale, è stato introdotto il `Timeout`: `get('https://api.github.com', timeout=1.5)`. È possibile inserire il numero di secondi (int o float) da lasciar passare prima che un errore venga triggerato. Se combinato col `Try/Except` può risultare utile per attacchi time-based (crittografia, sql ed altro).
 
-## [BeautifulSoup](https://realpython.com/beautiful-soup-web-scraper-python/)
+## [DOM](https://en.wikipedia.org/wiki/Document_Object_Model)
+Premendo F12 nei principali browser, vengono aperti gli strumenti per sviluppatori. La prima sezione mostrata di default è `elements`, elementi, che ci permette di esplorare interattivamente il Document Object Model (DOM).
+
+Il DOM è una struttura multi-piattaforma e indipendente dal linguaggio, tuttavia nel nostro caso la seguente definizione è sufficiente: il DOM è un'interfaccia che tratta HTML come una struttura ad albero dove ogni nodo è un oggetto che rappresenta parte del documento.
+
+Se non si è mai avuto a che fare con HTML e/o il concetto di DOM, il modo migliore per capire come funziona e prenderci dimestichezza è proprio visitando siti che si conoscono bene (ad esempio, un articolo su [wikipedia](https://it.wikipedia.org/wiki/Capture_the_flag_(sicurezza_informatica))) ed usando la sezione `elements` degli strumenti per sviluppatori
+
+![Esempio di utilizzo degli strumenti per sviluppatori](img/capitolo1/DOMelements.png)
+
+Passando il cursore su uno degli elementi, questo verrà evidenziato.
+
+Nell'esempio mostrato, `h3` è il [tag](https://developer.mozilla.org/en-US/docs/Glossary/Tag) dell'[elemento](https://developer.mozilla.org/en-US/docs/Glossary/Element), `post-title` la classe. Può essere presente anche l'`id`, che identifica univocamente l'elemento. 
+
+
+### [BeautifulSoup](https://realpython.com/beautiful-soup-web-scraper-python/)
 BeautifulSoup è una libreria estremamente utile per il [web scraping](https://it.wikipedia.org/wiki/Web_scraping). Si utilizza insieme alla libreria `requests` per ottenere automaticamente una serie di dati di nostro interesse.
 
+#### Creare un BeautifulSoup object e printarlo
+```py
+import requests
+from bs4 import BeautifulSoup
 
+URL = "https://theromanxpl0.it/"
+page = requests.get(URL)
 
+soup = BeautifulSoup(page.content, "html.parser")
+
+print(soup.prettify())
+```
+
+#### Cercare un elemento per ID
+```py
+results = soup.find(id="penguin-login writeup")
+```
+
+#### Cercare elementi per tag e/o classe/testo
+```py
+results = soup.find_all("h3", class_="post-title")
+resText = soup.find_all("h3", string="penguin")
+
+for result in results:
+    print(result.prettify(), end="\n")
+
+for result in resText:
+    print(result.prettify(), end="\n")
+```
+
+#### Estrarre il testo da un elemento
+```py
+print(result.text, end="\n")
+```
+
+Per la struttura del DOM, esso ha una gerarchia, ovvero i contenuti sono uno dentro l'altro (quelli che vediamo sono tutti figli dell'elemento con tag `HTML`). 
+
+#### Accedere al padre di un elemento
+```py
+result = soup.find("h3", class_="post-title")
+result = result.parent
+print(result.text, end="\n")
+```
+
+#### Estrarre i link
+Gli elementi `a`, approssimando, rappresentano un link, che si trova come attributo `href`. 
+
+```py
+import requests
+from bs4 import BeautifulSoup
+
+URL = "https://theromanxpl0.it/"
+page = requests.get(URL)
+
+soup = BeautifulSoup(page.content, "html.parser")
+
+links = soup.find_all("a")
+for link in links:
+    link_url = link["href"]
+    print(f"writeup link: {link_url}\n")
+```
+
+*L'introduzione è molto stringata e più orientata agli esempi in quanto l'argomento può diventare molto grande a seconda di quanto lo si vuole approfondire, e non mi aspetto che dobbiate usare questa libreria molto spesso, ancor meno se si tratta di un utilizzo non superficiale.*
 
 # Capitolo 1.5
 ## [Database relazionali](https://www.oracle.com/it/database/what-is-a-relational-database/) e [SQL](https://it.wikipedia.org/wiki/Structured_Query_Language)
@@ -283,7 +358,7 @@ Un database relazionale è quindi strutturato in modo molto simile ad un foglio 
 
 Esempio di tabella:
 
-![Esempio tabella giocatori CTF](/img/capitolo0.5/EsempioTabella.png)
+![Esempio tabella giocatori CTF](/img/capitolo1.5/EsempioTabella.png)
 
 Quindi i record di una tabella condividono la stessa "struttura": per ognuno di essi abbiamo lo stesso tipo di informazione.
 
@@ -294,7 +369,7 @@ Inoltre, ogni riga può essere utilizzata per creare una relazione tra diverse t
 
 Esempio riassuntivo:
 
-![Esempio primary e foreign key](/img/capitolo0.5/EsempioPrimaryForeignKey.png)
+![Esempio primary e foreign key](/img/capitolo1.5/EsempioPrimaryForeignKey.png)
 
 ### DBMS
 Una generica base di dati, o database, è una collezione di dati che viene gestita e organizzata dal DBMS (DataBase Management System). Gli RDBMS gestiscono database relazionali.
@@ -430,7 +505,7 @@ Ci sono poi altre istruzioni e operatori che tornano particolarmente utili quand
 
 Vi ricordate della `foreign key` e della `primary key`?
 
-![Esempio primary e foreign key](/img/capitolo0.5/EsempioPrimaryForeignKey.png)
+![Esempio primary e foreign key](/img/capitolo1.5/EsempioPrimaryForeignKey.png)
 
 La `JOIN` è un'istruzione che ci permette di eseguire manipolazioni utili usando queste due informazioni. A noi per il momento interessa solamente ottenere informazioni da due tabelle diverse, indipendentemente dalla presenza o meno di un legame tra di esse, ed in questo ci aiuta la `UNION`. Per usarla, basta scrivere due `SELECT` relative a due tabelle diverse, e metterci una `UNION` in mezzo:
 
