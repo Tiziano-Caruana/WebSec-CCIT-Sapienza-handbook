@@ -42,7 +42,7 @@ convert_to_pdf() {
 
 EOF
 
-    pandoc "${input_file}" --listings -H "${temp_dir}/listings-setup.tex" -o "${output_file}"
+    pandoc "${input_file}" -V geometry:margin=1.5in --listings -H "${temp_dir}/listings-setup.tex" -o "${output_file}"
 
     rm -rf "${temp_dir}"
 }
